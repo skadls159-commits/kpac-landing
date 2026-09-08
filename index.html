@@ -768,6 +768,76 @@ const adChannel = (function(){
   try { return 'ref_' + r.split('/')[2]; } catch (e) { return '직접유입'; }
 })();
 
+// ── 리드 전송 큐 (유실 방지) ─────────────────────────────────────────────
+// 예전 방식은 fetch 한 번 쏘고 .catch 로 콘솔에만 남겼다. 그래서 전파 끊김 / 앱스스크립트 점검 /
+// 전송 도중 창닫기 중 하나만 걸려도 리드가 조용히 사라졌고, 고객 화면엔 "접수 완료"가 떠서
+// 재신청도 하지 않았다. 이제는
+//   (1) 보내기 전에 localStorage 큐에 먼저 적고
+//   (2) 서버가 200 으로 답해야 큐에서 지우고
+//   (3) 실패하면 백오프로 재시도하고
+//   (4) 창을 닫으면 sendBeacon 으로 한 번 더 밀어 넣고
+//   (5) 그래도 못 보낸 건 다음 방문 때 자동으로 다시 보낸다.
+// 재시도/beacon 때문에 같은 건이 두 번 도착할 수 있어 payload 에 lead_id 를 넣는다
+// (앱스스크립트가 lead_id 로 중복을 걸러낸다). 2026-09-08
+var KPAC_QUEUE = (function () {
+  var KEY = 'kpac_lead_queue_v1';
+  var MAX = 50;
+  var sending = false;
+
+  function read() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; }
+  }
+  function write(list) {
+    try { localStorage.setItem(KEY, JSON.stringify(list.slice(-MAX))); } catch (e) {}
+  }
+  function add(p) {
+    var list = read();
+    list.push({ p: p, tries: 0, at: Date.now() });
+    write(list);
+  }
+  function post(p) {
+    return fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(p),
+      keepalive: true          // 창을 닫아도 전송이 살아남는다
+    }).then(function (r) { return !!(r && r.ok); }).catch(function () { return false; });
+  }
+  function flush() {
+    if (sending || !WEBHOOK_URL) return;
+    var list = read();
+    if (!list.length) return;
+    sending = true;
+    var item = list[0];
+    post(item.p).then(function (ok) {
+      var cur = read();
+      if (ok) {
+        cur.shift(); write(cur); sending = false;
+        if (cur.length) flush();
+      } else {
+        if (cur[0]) cur[0].tries = (cur[0].tries || 0) + 1;
+        write(cur); sending = false;   // 실패해도 절대 버리지 않는다
+        setTimeout(flush, Math.min(30000, 1000 * Math.pow(2, Math.min(5, (item.tries || 0)))));
+      }
+    });
+  }
+  function beacon() {
+    var list = read();
+    if (!list.length || !WEBHOOK_URL || !navigator.sendBeacon) return;
+    try {
+      navigator.sendBeacon(WEBHOOK_URL,
+        new Blob([JSON.stringify(list[0].p)], { type: 'text/plain;charset=utf-8' }));
+    } catch (e) {}
+  }
+  window.addEventListener('pagehide', beacon);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') beacon(); else flush();
+  });
+  window.addEventListener('online', flush);
+  setTimeout(flush, 1500);   // 지난 방문에서 못 보낸 게 있으면 이번에 보낸다
+  return { add: add, flush: flush };
+})();
+
 document.getElementById('leadForm').addEventListener('submit', function(e){
   e.preventDefault();
   if(document.getElementById('a_yes').checked) return;
@@ -784,12 +854,12 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
     submitted_at: new Date().toISOString()
   };
 
+  // 재시도/beacon 로 같은 건이 두 번 도착해도 앱스스크립트가 걸러내도록 고유 ID를 붙인다
+  payload.lead_id = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
   if(WEBHOOK_URL){
-    fetch(WEBHOOK_URL, {
-      method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'}, // Apps Script CORS preflight 회피용 (application/json 쓰면 조용히 실패함)
-      body: JSON.stringify(payload)
-    }).catch(err=>console.error('전송 실패:', err));
+    KPAC_QUEUE.add(payload);   // 먼저 저장하고
+    KPAC_QUEUE.flush();        // 그 다음 보낸다 (성공해야 큐에서 지워짐)
   } else {
     console.log('[웹훅 미설정] 수집된 리드:', payload);
   }
