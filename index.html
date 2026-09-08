@@ -746,7 +746,27 @@ if(KAKAO_CHANNEL_URL){ document.getElementById('kakaoChannelBtn').href = KAKAO_C
 
 // 광고 채널 구분 — 링크 끝에 ?src=meta / ?src=danggeun / ?src=google 붙이면 자동으로 잡힘
 const urlParams = new URLSearchParams(window.location.search);
-const adChannel = urlParams.get('src') || urlParams.get('utm_source') || '직접유입';
+const adChannel = (function(){
+  // 1) 링크에 ?src= / ?utm_source= 가 붙어 있으면 그 값을 그대로 사용
+  var p = (urlParams.get('src') || urlParams.get('utm_source') || '').trim();
+  if (p) return p;
+  // 2) 광고 클릭 파라미터
+  if (urlParams.get('gclid')) return 'google_ads';
+  if (urlParams.get('fbclid')) return 'meta_ads';
+  // 3) 파라미터가 없으면 어디서 넘어왔는지(referrer)로 판별
+  var r = (document.referrer || '').toLowerCase();
+  if (!r || r.indexOf('skadls159-commits.github.io') !== -1) return '직접유입';
+  if (r.indexOf('google.') !== -1) return 'google_organic';
+  if (r.indexOf('naver.') !== -1) return 'naver_organic';
+  if (r.indexOf('youtube.') !== -1 || r.indexOf('youtu.be') !== -1) return 'youtube';
+  if (r.indexOf('instagram.') !== -1) return 'instagram';
+  if (r.indexOf('facebook.') !== -1 || r.indexOf('fb.') !== -1) return 'facebook';
+  if (r.indexOf('daangn') !== -1 || r.indexOf('karrot') !== -1) return 'daangn';
+  if (r.indexOf('kakao') !== -1 || r.indexOf('daum.') !== -1) return 'kakao';
+  if (r.indexOf('bing.') !== -1) return 'bing';
+  if (r.indexOf('tistory') !== -1 || r.indexOf('blog.') !== -1) return 'blog';
+  try { return 'ref_' + r.split('/')[2]; } catch (e) { return '직접유입'; }
+})();
 
 document.getElementById('leadForm').addEventListener('submit', function(e){
   e.preventDefault();
