@@ -383,7 +383,7 @@ footer b{color:rgba(255,255,255,.78);}
 </div>
 
 <!-- ================= HERO ================= -->
-<section class="hero">
+<section class="hero" data-sec="hero">
   <div class="wrap">
     <div class="eyebrow">KOREA POLICY ADVISORY CENTER</div>
     <h1>정책자금, 신청은 다 하는데<br>왜 <em>결과는 다르게</em> 나올까요</h1>
@@ -403,7 +403,7 @@ footer b{color:rgba(255,255,255,.78);}
 <div class="urgent-strip">⏰ 정책자금 예산, 소진되면 그 해는 끝입니다 — 마감 임박</div>
 
 <!-- ================= 문제 공감 ================= -->
-<section class="pain">
+<section class="pain" data-sec="pain">
   <div class="wrap reveal">
     <div class="eyebrow">다들 겪는 문제입니다</div>
     <h2>못 받는 게 아니라,<br>몰라서 못 받는 겁니다</h2>
@@ -431,7 +431,7 @@ footer b{color:rgba(255,255,255,.78);}
 </section>
 
 <!-- ================= 영상으로 확인 ================= -->
-<section>
+<section data-sec="video">
   <div class="wrap reveal">
     <div class="eyebrow">영상으로 확인해보세요</div>
     <h2>대표님이 직접 설명드립니다</h2>
@@ -457,7 +457,7 @@ footer b{color:rgba(255,255,255,.78);}
 </section>
 
 <!-- ================= 실제 승인사례 ================= -->
-<section class="pain">
+<section class="pain" data-sec="cases">
   <div class="wrap reveal">
     <div class="mid-cta">
       <span>우리 회사도 가능할까요?</span>
@@ -488,7 +488,7 @@ footer b{color:rgba(255,255,255,.78);}
 </section>
 
 <!-- ================= STEP 프로세스 ================= -->
-<section class="steps">
+<section class="steps" data-sec="steps">
   <div class="wrap reveal">
     <div class="eyebrow">진행 과정</div>
     <h2>복잡한 건 저희 몫입니다.<br>대표님은 확인만 하시면 됩니다</h2>
@@ -503,7 +503,7 @@ footer b{color:rgba(255,255,255,.78);}
 </section>
 
 <!-- ================= 후킹: 왜 다른가 + 협회 소속 (연속) ================= -->
-<section>
+<section data-sec="why">
   <div class="wrap reveal">
     <div class="eyebrow">왜 다른가</div>
     <h2>한국정책자문센터가<br>압도적으로 잘할 수밖에 없는 이유입니다</h2>
@@ -523,7 +523,7 @@ footer b{color:rgba(255,255,255,.78);}
 </section>
 
 <!-- ================= 골든타임 (폼 직전 최종 푸시) ================= -->
-<section class="golden">
+<section class="golden" data-sec="golden">
   <div class="wrap reveal">
     <div class="eyebrow">지금 해야 하는 이유</div>
     <h2>정책자금은 예산이 소진되면<br>그 해는 더 받을 수 없습니다</h2>
@@ -537,7 +537,7 @@ footer b{color:rgba(255,255,255,.78);}
 </section>
 
 <!-- ================= FORM ================= -->
-<section class="formsec" id="form">
+<section class="formsec" id="form" data-sec="form">
   <div class="wrap reveal">
     <div class="eyebrow">무료 진단 신청</div>
     <h2>우리 회사, 가능한지 지금 확인해보세요</h2>
@@ -871,6 +871,190 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
   document.getElementById('leadForm').reset();
   document.getElementById('successModal').classList.add('show');
 });
+</script>
+
+<script>
+// ============================================================
+//  KPAC 랜딩 행동·이탈 추적 (2026-09-09)
+//  - 한 방문(세션)의 행동을 모아서 창을 닫거나 화면을 벗어날 때 1번 보낸다 (sendBeacon)
+//  - 보내는 곳: ① 자동화DB Apps Script(type:'landing_event' → 시트 '랜딩_이벤트')
+//               ② Meta 픽셀 커스텀 이벤트(리타겟팅 모수용) ③ gtag 이벤트(GA4 붙이면 자동 연결)
+//  - 개인정보는 안 보냄(이름·전화 X). 폼은 '어느 칸까지 썼는지'만 기록
+// ============================================================
+(function(){
+  var GA4_ID = '';   // GA4 만들면 'G-XXXXXXX' 넣기 (없으면 AW 태그로만 이벤트 전송)
+  if (GA4_ID && typeof gtag === 'function') gtag('config', GA4_ID);
+
+  var T0 = Date.now();
+  var sid = 'S' + T0.toString(36) + Math.random().toString(36).slice(2,7);
+  var ev = [];                 // [초, 이벤트, 값]
+  var seen = {};               // 1회성 이벤트 중복 방지
+  var state = {
+    maxScroll: 0, lastSec: 'hero', secOrder: [], video: {}, cta: [],
+    formStart: 0, fields: [], submitted: 0, lightbox: 0, kakao: 0, tel: 0
+  };
+  var dirty = false, sentOnce = false;
+
+  function sec(){ return Math.round((Date.now()-T0)/100)/10; }
+  function log(name, val, once){
+    if (once && seen[name + '|' + (val||'')]) return;
+    seen[name + '|' + (val||'')] = 1;
+    ev.push([sec(), name, val === undefined ? '' : val]);
+    dirty = true;
+    try { if (typeof gtag === 'function') gtag('event', 'lp_' + name, { value_text: String(val||''), t_sec: sec() }); } catch(e){}
+  }
+  function fb(name, data){ try { if (typeof fbq === 'function') fbq('trackCustom', name, data||{}); } catch(e){} }
+
+  // ---- 기기/유입 ----
+  var isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  log('page_view', (isMobile?'mobile':'desktop'), true);
+
+  // ---- 스크롤 깊이 25/50/75/90/100 ----
+  function scrollPct(){
+    var h = document.documentElement;
+    var total = Math.max(1, (h.scrollHeight || document.body.scrollHeight) - window.innerHeight);
+    return Math.min(100, Math.round(((window.scrollY||h.scrollTop||0) / total) * 100));
+  }
+  var marks = [25,50,75,90,100];
+  function onScroll(){
+    var p = scrollPct();
+    if (p > state.maxScroll) state.maxScroll = p;
+    for (var i=0;i<marks.length;i++){
+      if (p >= marks[i] && !seen['scroll|'+marks[i]]) {
+        log('scroll', marks[i], true);
+        if (marks[i] === 50) fb('LP_Scroll50');
+        if (marks[i] === 90) fb('LP_Scroll90');
+      }
+    }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  setTimeout(onScroll, 1000);
+
+  // ---- 섹션 도달 (화면의 40% 이상 보이면) ----
+  var secEls = document.querySelectorAll('section[data-sec]');
+  if ('IntersectionObserver' in window) {
+    var sio = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (!e.isIntersecting) return;
+        var n = e.target.getAttribute('data-sec');
+        if (seen['section|'+n]) return;
+        log('section', n, true);
+        state.secOrder.push(n + '@' + sec());
+        state.lastSec = n;
+        if (n === 'form') fb('LP_ReachForm');
+      });
+    }, { threshold: 0.4 });
+    secEls.forEach(function(el){ sio.observe(el); });
+    // 지금 어느 섹션에 있는지(마지막으로 보인 섹션) — 이탈 지점 판정용
+    var cur = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if (e.isIntersecting) state.lastSec = e.target.getAttribute('data-sec'); });
+    }, { threshold: 0.5 });
+    secEls.forEach(function(el){ cur.observe(el); });
+  }
+
+  // ---- 영상 ----
+  var vids = document.querySelectorAll('video');
+  vids.forEach(function(v, i){
+    var key = 'v' + (i+1);
+    var q = {};
+    v.addEventListener('play', function(){
+      if (!seen['video_play|'+key]) { log('video_play', key, true); fb('LP_VideoPlay', { video: key }); }
+      state.video[key] = state.video[key] || 0;
+    });
+    v.addEventListener('timeupdate', function(){
+      if (!v.duration) return;
+      var p = Math.floor((v.currentTime / v.duration) * 100);
+      state.video[key] = Math.max(state.video[key]||0, p);
+      [25,50,75].forEach(function(m){ if (p >= m && !q[m]) { q[m] = 1; log('video_' + m, key, true); } });
+    });
+    v.addEventListener('ended', function(){ log('video_end', key, true); state.video[key] = 100; });
+  });
+
+  // ---- CTA / 링크 클릭 ----
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a,button,[onclick]');
+    if (!a) return;
+    var href = (a.getAttribute('href') || '');
+    if (href === '#form') {
+      var where = a.closest('#stickyCta') ? 'sticky' : (a.closest('.hero') ? 'hero' : 'mid');
+      log('cta', where); state.cta.push(where + '@' + sec()); fb('LP_CTAClick', { where: where });
+    } else if (href.indexOf('tel:') === 0) { log('tel_click'); state.tel++; fb('LP_TelClick'); }
+    else if (a.id === 'kakaoChannelBtn' || href.indexOf('kakao') !== -1) { log('kakao_click'); state.kakao++; }
+    else if ((a.getAttribute('onclick')||'').indexOf('openLightbox') !== -1) { log('case_zoom', '', true); state.lightbox++; }
+  }, true);
+
+  // ---- 폼 ----
+  var form = document.getElementById('leadForm');
+  if (form) {
+    var order = ['f_name','f_phone','f_industry','f_bizno','f_region','f_arrears','f_agree'];
+    form.addEventListener('focusin', function(e){
+      var id = e.target.id || e.target.name || '';
+      if (!state.formStart) { state.formStart = sec(); log('form_start', id, true); fb('LP_FormStart'); }
+    });
+    form.addEventListener('change', function(e){
+      var id = e.target.id || e.target.name || '';
+      if (id && state.fields.indexOf(id) === -1) { state.fields.push(id); log('form_field', id, true); }
+      if (id === 'f_arrears' && e.target.value === '예') log('arrears_yes', '', true);
+    });
+    form.addEventListener('submit', function(){
+      var yes = document.getElementById('a_yes');
+      if (yes && yes.checked) return;
+      state.submitted = 1; log('form_submit', '', true);
+      send(true);
+    });
+  }
+
+  // ---- 오류도 기록 (폼이 안 눌리는 등 기술 이탈 잡기) ----
+  window.addEventListener('error', function(e){ log('js_error', String(e.message||'').slice(0,80)); });
+
+  // ---- 이탈 지점 판정 ----
+  function exitPoint(){
+    if (state.submitted) return '제출완료';
+    if (state.formStart) return '폼작성중이탈(' + (state.fields.slice(-1)[0] || '시작만') + ')';
+    if (seen['section|form']) return '폼도달후이탈';
+    return (state.lastSec || 'hero') + '이탈';
+  }
+
+  // ---- 전송 ----
+  function payload(){
+    return {
+      type: 'landing_event', session_id: sid, at: new Date().toISOString(),
+      channel: (typeof adChannel !== 'undefined' ? adChannel : ''),
+      device: isMobile ? 'mobile' : 'desktop',
+      referrer: (document.referrer || '').slice(0,120),
+      viewport: window.innerWidth + 'x' + window.innerHeight,
+      duration_sec: sec(),
+      max_scroll: state.maxScroll,
+      last_section: state.lastSec,
+      sections: state.secOrder.join(','),
+      video: Object.keys(state.video).map(function(k){ return k + ':' + state.video[k] + '%'; }).join(','),
+      cta: state.cta.join(','),
+      form_start_sec: state.formStart || '',
+      form_fields: state.fields.join(','),
+      submitted: state.submitted,
+      exit_point: exitPoint(),
+      case_zoom: state.lightbox, kakao: state.kakao, tel: state.tel,
+      events: ev.map(function(x){ return x.join(':'); }).join('|').slice(0, 1500),
+      ua: navigator.userAgent.slice(0, 120)
+    };
+  }
+  function send(force){
+    if (!dirty && !force) return;
+    if (sec() < 1 && !force) return;          // 1초 미만 튕김도 기록은 하되 아래 beacon으로
+    dirty = false; sentOnce = true;
+    var body = JSON.stringify(payload());
+    try {
+      if (navigator.sendBeacon) navigator.sendBeacon(WEBHOOK_URL, new Blob([body], { type: 'text/plain;charset=utf-8' }));
+      else fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body, keepalive: true });
+    } catch(e){}
+  }
+  window.addEventListener('pagehide', function(){ send(!sentOnce); });
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') send(!sentOnce); });
+  window.addEventListener('beforeunload', function(){ send(!sentOnce); });
+  // 오래 머무는 사람은 60초마다 중간 저장(같은 session_id → 시트에서 마지막 행이 최신)
+  setInterval(function(){ if (dirty) send(false); }, 60000);
+  window.KPAC_TRACK = { state: state, events: ev, send: send };
+})();
 </script>
 
 </body>
