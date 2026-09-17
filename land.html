@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>이동 중…</title>
+<style>
+  html,body{height:100%;margin:0}
+  body{display:flex;align-items:center;justify-content:center;
+       font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+       background:#fff;color:#5b6270;font-size:15px}
+  .w{text-align:center}
+  .s{width:26px;height:26px;margin:0 auto 12px;border:3px solid #e6e9f0;border-top-color:#000F59;
+     border-radius:50%;animation:r .8s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+  a{color:#000F59}
+</style>
+</head>
+<body>
+<div class="w">
+  <div class="s"></div>
+  <div>이동 중입니다…</div>
+  <div style="margin-top:10px;font-size:13px">
+    화면이 바뀌지 않으면 <a id="m" href="#">여기를 눌러주세요</a>
+  </div>
+</div>
+<script>
+/* 알림톡 버튼 경유 링크 — 클릭을 세고 목적지로 넘긴다.
+   ?c=chat  오픈채팅방 / ?c=land  랜딩페이지
+   자동화DB Apps Script 로 클릭 1건을 남기고(실패해도 이동은 진행) 즉시 리다이렉트. */
+(function () {
+  var DEST = {
+    chat: 'https://open.kakao.com/o/gbN365Ci',
+    land: 'https://skadls159-commits.github.io/kpac-landing/'
+  };
+  var LOG = 'https://script.google.com/macros/s/AKfycbwIfwL3rdpX-wxP9lGZYVeedDixkfqqSHUi6SncaEB_WqE9899qtJsDNYi7uPmty/exec';
+
+  var q = new URLSearchParams(location.search);
+  var c = 'land';
+  var url = DEST[c] || DEST.land;
+  var m = q.get('m') || '';   /* ?m=0918 로 회차 구분 */                 // 발송 회차 표시용(선택): ?m=0917
+  document.getElementById('m').href = url;
+
+  try {
+    var log = LOG + '?action=click&c=' + encodeURIComponent(c) +
+              '&m=' + encodeURIComponent(m) +
+              '&r=' + encodeURIComponent((document.referrer || '').slice(0, 120));
+    if (navigator.sendBeacon) { navigator.sendBeacon(log); }
+    else { (new Image()).src = log; }
+  } catch (e) {}
+
+  setTimeout(function () { location.replace(url); }, 250);
+})();
+</script>
+</body>
+</html>
