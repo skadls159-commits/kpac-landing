@@ -854,6 +854,7 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
     tax_arrears: document.querySelector('input[name=f_arrears]:checked')?.value || '',
     source: 'kpac_ad_landing',
     channel: adChannel,
+    ad: (new URLSearchParams(location.search).get('ad') || new URLSearchParams(location.search).get('utm_content') || ''),
     submitted_at: new Date().toISOString()
   };
 
