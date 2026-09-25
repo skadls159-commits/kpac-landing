@@ -374,6 +374,7 @@ footer b{color:rgba(255,255,255,.78);}
 
 @media(max-width:520px){section{padding:64px 18px;}.hero{padding:80px 18px 52px;}}
 </style>
+<script>!function(w,d,s,u){if(w.oaiq)return;var q=function(){q.q.push(arguments)};q.q=[];w.oaiq=q;var j=d.createElement(s);j.async=1;j.src=u;var f=d.getElementsByTagName(s)[0];f.parentNode.insertBefore(j,f)}(window,document,"script","https://bzrcdn.openai.com/sdk/oaiq.min.js");oaiq("init",{pixelId:"Tz2MMQxD2MjS2A8NhoAY5G"});</script>
 </head>
 <body>
 
@@ -753,9 +754,11 @@ const adChannel = (function(){
   // 2) 광고 클릭 파라미터
   if (urlParams.get('gclid')) return 'google_ads';
   if (urlParams.get('fbclid')) return 'meta_ads';
+  if (urlParams.get('oppref')) return 'chatgpt_ads';
   // 3) 파라미터가 없으면 어디서 넘어왔는지(referrer)로 판별
   var r = (document.referrer || '').toLowerCase();
   if (!r || r.indexOf('skadls159-commits.github.io') !== -1) return '직접유입';
+  if (r.indexOf('chatgpt.com') !== -1 || r.indexOf('openai.com') !== -1) return 'chatgpt';
   if (r.indexOf('google.') !== -1) return 'google_organic';
   if (r.indexOf('naver.') !== -1) return 'naver_organic';
   if (r.indexOf('youtube.') !== -1 || r.indexOf('youtu.be') !== -1) return 'youtube';
@@ -866,6 +869,7 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
 
   if(typeof fbq !== 'undefined'){ fbq('track','Lead', payload); }
   if(window.karrotPixel){ window.karrotPixel.track('CompleteRegistration'); }
+  try{ if(window.oaiq) oaiq('measure','lead_created',{type:'customer_action'}); }catch(x){}
   if(typeof gtag !== 'undefined'){ gtag('event', 'conversion', {'send_to': 'AW-18048988442/iDYiCNiihN4cEJrqtp5D', 'value': 1.0, 'currency': 'KRW'}); }
 
   document.getElementById('leadForm').reset();
