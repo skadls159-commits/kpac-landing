@@ -16,6 +16,9 @@
   @keyframes r{to{transform:rotate(360deg)}}
   a{color:#000F59}
 </style>
+<!-- v40 r151c GA4 「KPAC 랜딩」: 알림톡 버튼 클릭도 GA4에 page_view로 남기고 넘어감 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WCTPRG3HYE"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());</script>
 </head>
 <body>
 <div class="w">
@@ -50,7 +53,13 @@
     else { (new Image()).src = log; }
   } catch (e) {}
 
-  setTimeout(function () { location.replace(url); }, 250);
+  /* v40 r151c: GA4 page_view 를 보낸 뒤 이동 (최대 0.8초 기다림) */
+  var gone = false;
+  function go() { if (gone) return; gone = true; location.replace(url); }
+  try {
+    gtag('config', 'G-WCTPRG3HYE', { page_title: '알림톡 버튼 경유', kpac_m: m, kpac_c: c, transport_type: 'beacon', event_callback: go, event_timeout: 700 });
+  } catch (e) {}
+  setTimeout(go, 800);
 })();
 </script>
 </body>

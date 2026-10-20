@@ -894,7 +894,7 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
   if(typeof fbq !== 'undefined'){ fbq('track','Lead', payload); }
   if(window.karrotPixel){ window.karrotPixel.track('CompleteRegistration'); }
   try{ if(window.oaiq) oaiq('measure','lead_created',{type:'customer_action'}); }catch(x){}
-  if(typeof gtag !== 'undefined'){ gtag('event', 'conversion', {'send_to': 'AW-18048988442/iDYiCNiihN4cEJrqtp5D', 'value': 1.0, 'currency': 'KRW'}); }
+  if(typeof gtag !== 'undefined'){ gtag('event', 'conversion', {'send_to': 'AW-18048988442/iDYiCNiihN4cEJrqtp5D', 'value': 1.0, 'currency': 'KRW'}); } /* v40 r151c GA4 리드 */ try{ if(typeof gtag==='function') gtag('event','generate_lead',{send_to:'G-WCTPRG3HYE', currency:'KRW', value:1, lead_channel:String(payload.channel||''), lead_ad:String(payload.ad||'')}); }catch(x){}
 
   document.getElementById('leadForm').reset();
   document.getElementById('successModal').classList.add('show');
@@ -910,9 +910,9 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
 //  - 개인정보는 안 보냄(이름·전화 X). 폼은 '어느 칸까지 썼는지'만 기록
 // ============================================================
 (function(){
-  var GA4_ID = '';   // GA4 만들면 'G-XXXXXXX' 넣기 (없으면 AW 태그로만 이벤트 전송)
+  var GA4_ID = 'G-WCTPRG3HYE'; /* v40 r151c GA4 「KPAC 랜딩」 */   // GA4 만들면 'G-XXXXXXX' 넣기 (없으면 AW 태그로만 이벤트 전송)
   var CRM_LP_URL = 'https://kpac-crm-server-production.up.railway.app/api/r150c/lp';   // v40 r150c
-  if (GA4_ID && typeof gtag === 'function') gtag('config', GA4_ID);
+  if (GA4_ID && typeof gtag === 'function') { try { var _q = new URLSearchParams(location.search); gtag('config', GA4_ID, { kpac_src: _q.get('src') || '', kpac_ad: _q.get('ad') || _q.get('utm_content') || '', kpac_m: _q.get('m') || '' }); } catch (e) { gtag('config', GA4_ID); } } /* v40 r151c */
 
   var T0 = Date.now();
   var sid = 'S' + T0.toString(36) + Math.random().toString(36).slice(2,7);
