@@ -841,6 +841,27 @@ var KPAC_QUEUE = (function () {
   return { add: add, flush: flush };
 })();
 
+
+// ── v40 r150c 광고 추적: 첫 클릭·마지막 클릭(30일) 저장 → 신청서·방문 기록에 같이 보냄 ──
+var KPAC_ATTR = (function () {
+  var KEYS = ['src','ad','adg','utm_source','utm_medium','utm_campaign','utm_term','utm_content','gclid','gbraid','wbraid','fbclid','ttclid'];
+  var P = new URLSearchParams(location.search), cur = {}, hasAd = false;
+  KEYS.forEach(function (k) { var v = P.get(k); if (v) { cur[k] = String(v).slice(0, 200); hasAd = true; } });
+  cur.ref = (document.referrer || '').slice(0, 200); cur.url = location.href.split('#')[0].slice(0, 600); cur.t = Date.now();
+  try { cur.ch = adChannel; } catch (e) {}
+  var FK = 'kpac_attr_first_v1', LK = 'kpac_attr_last_v1', TTL = 30 * 86400000;
+  function rd(k) { try { var o = JSON.parse(localStorage.getItem(k) || 'null'); if (o && Date.now() - (o.t || 0) < TTL) return o; } catch (e) {} return null; }
+  function wr(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
+  var first = rd(FK); if (!first || (hasAd && !first.ch)) { first = cur; wr(FK, cur); }
+  var stored = rd(LK); if (hasAd) wr(LK, cur);
+  var last = hasAd ? cur : (stored || cur);   // 광고 없이 다시 들어와도 30일 안 마지막 광고를 기억
+  return {
+    channel: function (fallback) { return (!hasAd && stored && stored.ch) ? stored.ch : fallback; },
+    fields: function () { var L = last; return { utm_medium: L.utm_medium || '', utm_campaign: L.utm_campaign || '', utm_term: L.utm_term || '', utm_content: L.utm_content || '', gclid: L.gclid || L.gbraid || L.wbraid || '', fbclid: L.fbclid || '', ttclid: L.ttclid || '', referrer: (L.ref || '').slice(0, 200), landing: (L.url || location.href).slice(0, 480), first_visit: new Date(first.t || Date.now()).toISOString() }; },
+    compact: function () { return { first: first, last: last }; }
+  };
+})();
+
 document.getElementById('leadForm').addEventListener('submit', function(e){
   e.preventDefault();
   if(document.getElementById('a_yes').checked) return;
@@ -860,6 +881,8 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
 
   // 재시도/beacon 로 같은 건이 두 번 도착해도 앱스스크립트가 걸러내도록 고유 ID를 붙인다
   payload.lead_id = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  // v40 r150c: 캠페인·키워드·소재·클릭ID·랜딩 주소까지 같이 보냄 (CRM 소재별 추적)
+  try { Object.assign(payload, KPAC_ATTR.fields()); payload.channel = KPAC_ATTR.channel(payload.channel); window.KPAC_LAST_LEAD_ID = payload.lead_id; } catch (x) {}
 
   if(WEBHOOK_URL){
     KPAC_QUEUE.add(payload);   // 먼저 저장하고
@@ -888,6 +911,7 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
 // ============================================================
 (function(){
   var GA4_ID = '';   // GA4 만들면 'G-XXXXXXX' 넣기 (없으면 AW 태그로만 이벤트 전송)
+  var CRM_LP_URL = 'https://kpac-crm-server-production.up.railway.app/api/r150c/lp';   // v40 r150c
   if (GA4_ID && typeof gtag === 'function') gtag('config', GA4_ID);
 
   var T0 = Date.now();
@@ -1040,7 +1064,9 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
       exit_point: exitPoint(),
       case_zoom: state.lightbox, kakao: state.kakao, tel: state.tel,
       events: ev.map(function(x){ return x.join(':'); }).join('|').slice(0, 1500),
-      ua: navigator.userAgent.slice(0, 120)
+      ua: navigator.userAgent.slice(0, 120),
+      attr: (typeof KPAC_ATTR !== 'undefined' ? KPAC_ATTR.compact() : null),   // v40 r150c
+      lead_id: (window.KPAC_LAST_LEAD_ID || '')
     };
   }
   function send(force){
@@ -1051,6 +1077,7 @@ document.getElementById('leadForm').addEventListener('submit', function(e){
     try {
       if (navigator.sendBeacon) navigator.sendBeacon(WEBHOOK_URL, new Blob([body], { type: 'text/plain;charset=utf-8' }));
       else fetch(WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body, keepalive: true });
+      try { if (navigator.sendBeacon) navigator.sendBeacon(CRM_LP_URL, new Blob([body], { type: 'text/plain;charset=utf-8' })); else fetch(CRM_LP_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body, keepalive: true }); } catch(e2){}   // v40 r150c: CRM 방문·이탈 기록
     } catch(e){}
   }
   window.addEventListener('pagehide', function(){ send(!sentOnce); });
