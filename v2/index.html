@@ -151,7 +151,7 @@ body{background:var(--bg-2,#f5f7fb)}
     try{if(window.karrotPixel) window.karrotPixel.track('CompleteRegistration');}catch(x){}
   }
   function intake(body){ /* r174a: 광고 출처를 먼저 CRM에 남김 → 예약은 같은 번호라 출처 그대로 */
-    var F=adFields(), p={name:body.name, phone:body.phone, message:'통화 예약 ('+label(sel,pick)+')', page:'kpac-landing 예약화면 v2'};
+    var F=adFields(), p={name:body.name, phone:body.phone, page:'kpac-landing 예약화면 v2'};
     for(var k in F){ if(F[k]) p[k]=F[k]; }
     if(TEST) p.test=true;
     return fetch(API+'/api/intake',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(p)}).then(function(r){return r.json();}).catch(function(){return null;});
