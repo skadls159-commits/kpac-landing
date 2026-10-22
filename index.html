@@ -284,9 +284,9 @@ window.karrotPixel.track('ViewPage');
       if(!body.region){msg('지역을 선택해 주세요.');return;} if(!body.agree){msg('개인정보 수집 · 이용에 동의해 주세요.');return;}
     }
     busy=true; var go=$('bkGo'); go.disabled=true; go.textContent='예약 중…'; if(TEST) body.test=true;
-    (known?Promise.resolve(null):intake(body)).then(function(){ return fetch(API+'/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j}})}).then(function(x){
+    /* r180b: 예약 한 번만 보냄 (intake 먼저 보내면 같은 번호라 「재신청」 + 텔레·알림톡 2번이 됐어요) · 광고 출처는 예약에 같이 실어 보냄(서버 업데이트 후 반영) + 비콘에 남김 */ if(!known){ var F180=adFields(); for(var k180 in F180){ if(F180[k180]&&!body[k180]) body[k180]=F180[k180]; } body.page='kpac-landing 예약화면'; body.lead_id=body.lead_id||('lp'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)); } Promise.resolve(null).then(function(){ return fetch(API+'/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j}})}).then(function(x){
       busy=false; go.textContent='예약하기';
-      if(x.s===200&&x.j.ok){conv();$('bkWhen').textContent=x.j.when;$('bk').classList.add('ok');window.scrollTo({top:$('bk').getBoundingClientRect().top+window.scrollY-120,behavior:'smooth'});return;}
+      if(x.s===200&&x.j.ok){conv(); try{ if(!known){ var bc={session_id:body.lead_id, channel:'kpac-landing 예약화면', device:(/Mobi|Android|iPhone/i.test(navigator.userAgent)?'mobile':'pc'), referrer:(document.referrer||'').slice(0,150), submitted:1, lead_id:body.lead_id, cta:'book '+body.day+' '+body.hour+(body.region?' region='+body.region:''), attr:{first:A,last:A}}; var bs=JSON.stringify(bc); if(!(navigator.sendBeacon&&navigator.sendBeacon(API+'/api/r150c/lp',bs))) fetch(API+'/api/r150c/lp',{method:'POST',body:bs,keepalive:true}).catch(function(){}); } }catch(e){}$('bkWhen').textContent=x.j.when;$('bk').classList.add('ok');window.scrollTo({top:$('bk').getBoundingClientRect().top+window.scrollY-120,behavior:'smooth'});return;}
       msg(x.j.error||'예약에 실패했어요. 1866-1912로 연락 주세요.'); pick=null; load();
     }); }).catch(function(){busy=false;go.textContent='예약하기';msg('연결이 원활하지 않아요. 잠시 후 다시 시도해 주세요.');draw();});
   });
