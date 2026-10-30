@@ -219,7 +219,7 @@ window.karrotPixel.track('ViewPage');
   var LK='kpac_attr_last_v1', TTL=30*86400000, stored=null;
   try{var o=JSON.parse(localStorage.getItem(LK)||'null'); if(o&&Date.now()-(o.t||0)<TTL) stored=o;}catch(e){}
   if(hasAd){try{localStorage.setItem(LK,JSON.stringify(cur));}catch(e){} try{sessionStorage.setItem(LK,JSON.stringify(cur));}catch(e){}}
-  var A=hasAd?cur:(stored||cur), TEST=AP.get('test')==='1';
+  var A=hasAd?cur:(stored||cur), TEST=AP.get('test')==='1'; window.KPAC_LP_A=A; window.KPAC_LP_TEST=TEST; /* r247c: 방문 추적이 같은 광고 출처를 씀 */
   function lab177c(){ /* r177c: 예전 랜딩(앱스스크립트)처럼 한글 채널로 → CRM 출처 「유튜브 · 창업3년」/「구글 검색」 */ var s=String(A.src||A.utm_source||'').toLowerCase(), m=String(A.utm_medium||'').toLowerCase(); if(/youtube|_yt\b|^yt|ytis|ytv|demand/.test(s+' '+m)) return '유튜브/랜딩'; if(/google|adwords/.test(s)||A.gclid||A.gbraid||A.wbraid) return '구글검색/랜딩'; if(/meta|facebook|insta|^fb/.test(s)||A.fbclid) return '메타/랜딩'; if(/daangn|karrot|당근/.test(s)) return '당근/랜딩'; return A.utm_source||''; }
   function adFields(){return {src:A.src||A.utm_source||(A.gclid||A.gbraid||A.wbraid?'google_ads':''), ad:A.ad||A.utm_content||'', utm_source:lab177c(), utm_medium:A.utm_medium||'', utm_campaign:A.utm_campaign||'', utm_term:A.utm_term||'', utm_content:A.utm_content||'', gclid:A.gclid||A.gbraid||A.wbraid||'', fbclid:A.fbclid||'', ttclid:A.ttclid||'', referrer:(A.ref||'').slice(0,200), landing:(A.url||location.href).slice(0,480)};}
   function conv(){
@@ -279,13 +279,47 @@ window.karrotPixel.track('ViewPage');
       if(!body.region){msg('지역을 선택해 주세요.');return;} if(!body.agree){msg('개인정보 수집 · 이용에 동의해 주세요.');return;}
     }
     busy=true; var go=$('bkGo'); go.disabled=true; go.textContent='예약 중…'; if(TEST) body.test=true;
-    /* r180b: 예약 한 번만 보냄 (intake 먼저 보내면 같은 번호라 「재신청」 + 텔레·알림톡 2번이 됐어요) · 광고 출처는 예약에 같이 실어 보냄(서버 업데이트 후 반영) + 비콘에 남김 */ if(!known){ var F180=adFields(); for(var k180 in F180){ if(F180[k180]&&!body[k180]) body[k180]=F180[k180]; } body.page='kpac-landing 예약화면'; body.lead_id=body.lead_id||('lp'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)); } Promise.resolve(null).then(function(){ return fetch(API+'/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j}})}).then(function(x){
+    /* r180b: 예약 한 번만 보냄 (intake 먼저 보내면 같은 번호라 「재신청」 + 텔레·알림톡 2번이 됐어요) · 광고 출처는 예약에 같이 실어 보냄(서버 업데이트 후 반영) + 비콘에 남김 */ if(!known){ var F180=adFields(); for(var k180 in F180){ if(F180[k180]&&!body[k180]) body[k180]=F180[k180]; } body.page='kpac-landing 예약화면'; body.lead_id=body.lead_id||window.KPAC_LP_SID||('lp'+Date.now().toString(36)+Math.random().toString(36).slice(2,8)); } Promise.resolve(null).then(function(){ return fetch(API+'/api/book',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j}})}).then(function(x){
       busy=false; go.textContent='예약하기';
-      if(x.s===200&&x.j.ok){conv(); try{ if(!known){ var bc={session_id:body.lead_id, channel:'kpac-landing 예약화면', device:(/Mobi|Android|iPhone/i.test(navigator.userAgent)?'mobile':'pc'), referrer:(document.referrer||'').slice(0,150), submitted:1, lead_id:body.lead_id, cta:'book '+body.day+' '+body.hour+(body.region?' region='+body.region:''), attr:{first:A,last:A}}; var bs=JSON.stringify(bc); if(!(navigator.sendBeacon&&navigator.sendBeacon(API+'/api/r150c/lp',bs))) fetch(API+'/api/r150c/lp',{method:'POST',body:bs,keepalive:true}).catch(function(){}); } }catch(e){}$('bkWhen').textContent=x.j.when;$('bk').classList.add('ok');window.scrollTo({top:$('bk').getBoundingClientRect().top+window.scrollY-120,behavior:'smooth'});return;}
+      if(x.s===200&&x.j.ok){conv(); try{ if(!known){ var bc={session_id:body.lead_id, channel:'kpac-landing 예약화면', device:(/Mobi|Android|iPhone/i.test(navigator.userAgent)?'mobile':'pc'), referrer:(document.referrer||'').slice(0,150), submitted:1, lead_id:body.lead_id, cta:'book '+body.day+' '+body.hour+(body.region?' region='+body.region:''), attr:{first:A,last:A}}; var bs=JSON.stringify(bc); if(!(navigator.sendBeacon&&navigator.sendBeacon(API+'/api/r150c/lp',bs))) fetch(API+'/api/r150c/lp',{method:'POST',body:bs,keepalive:true}).catch(function(){}); } }catch(e){}try{if(window.KPAC_TRACK)window.KPAC_TRACK.done(known?'':body.lead_id,'book '+body.day+' '+body.hour+(body.region?' region='+body.region:''));}catch(e){} /* r247c */$('bkWhen').textContent=x.j.when;$('bk').classList.add('ok');window.scrollTo({top:$('bk').getBoundingClientRect().top+window.scrollY-120,behavior:'smooth'});return;}
       msg(x.j.error||'예약에 실패했어요. 1866-1912로 연락 주세요.'); pick=null; load();
     }); }).catch(function(){busy=false;go.textContent='예약하기';msg('연결이 원활하지 않아요. 잠시 후 다시 시도해 주세요.');draw();});
   });
   load();
+})();
+</script>
+<script>
+/* v40 r247c: 예약 랜딩 방문·이탈 추적 (예전 랜딩 r150c 비콘 복구) · 이름·전화 같은 개인정보는 안 보냄 */
+(function(){
+  var LPU='https://kpac-crm-server-production.up.railway.app/api/r150c/lp';
+  var T0=Date.now(), sid='lp'+T0.toString(36)+Math.random().toString(36).slice(2,8);
+  window.KPAC_LP_SID=sid;
+  var mob=/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  var st={maxScroll:0,secs:[],last:'hero',fs:0,fields:[],sub:0,cta:'',lead:'',tel:0,kakao:0};
+  var dirty=true;
+  function sec(){return Math.round((Date.now()-T0)/100)/10;}
+  function attr(){var a=window.KPAC_LP_A||{},o={};for(var k in a){if(a[k]!=null&&a[k]!=='')o[k]=a[k];}if(window.KPAC_LP_TEST)o.ch='test150';return {first:o,last:o};}
+  function exitP(){if(st.sub)return '제출완료';if(st.fs)return '폼작성중이탈('+(st.fields.slice(-1)[0]||'시작만')+')';if(st.secs.indexOf('form')>=0)return '폼도달후이탈';return st.last+'이탈';}
+  function payload(){var p={session_id:sid,channel:'kpac-landing 예약화면',device:mob?'mobile':'desktop',referrer:(document.referrer||'').slice(0,150),duration_sec:sec(),max_scroll:st.maxScroll,last_section:st.last,sections:st.secs.join(','),form_start_sec:st.fs||'',form_fields:st.fields.join(','),submitted:st.sub,exit_point:exitP(),tel:st.tel,kakao:st.kakao,attr:attr()};if(st.cta)p.cta=st.cta;if(st.lead)p.lead_id=st.lead;return p;}
+  function send(force){if(!dirty&&!force)return;dirty=false;var b=JSON.stringify(payload());try{if(!(navigator.sendBeacon&&navigator.sendBeacon(LPU,new Blob([b],{type:'text/plain;charset=utf-8'}))))fetch(LPU,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:b,keepalive:true}).catch(function(){});}catch(e){}}
+  function pct(){var h=document.documentElement;var t=Math.max(1,(h.scrollHeight||document.body.scrollHeight)-window.innerHeight);return Math.min(100,Math.round(((window.scrollY||h.scrollTop||0)/t)*100));}
+  function onScroll(){var p=pct();if(p>st.maxScroll){var old=st.maxScroll;st.maxScroll=p;[25,50,75,90,100].forEach(function(m){if(old<m&&p>=m)dirty=true;});}}
+  window.addEventListener('scroll',onScroll,{passive:true});setTimeout(onScroll,1000);
+  var bk=document.getElementById('bk');
+  if(bk&&'IntersectionObserver' in window){new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){st.last='form';if(st.secs.indexOf('form')<0){st.secs.push('form');dirty=true;}}});},{threshold:0.3}).observe(bk);}
+  function fstart(f){if(f&&st.fields.indexOf(f)<0){st.fields.push(f);dirty=true;}if(!st.fs){st.fs=sec()||0.1;send(true);}}
+  if(bk){
+    bk.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('.bk-day,.bk-slot');if(t&&!t.disabled)fstart(t.classList.contains('bk-day')?'날짜':'시간');},true);
+    bk.addEventListener('focusin',function(e){var id=e.target&&e.target.id;if(/^b_/.test(id||''))fstart({b_name:'이름',b_phone:'연락처',b_region:'지역',b_agree:'동의'}[id]||id);},true);
+    bk.addEventListener('change',function(e){var id=e.target&&e.target.id;if(/^b_/.test(id||''))fstart({b_name:'이름',b_phone:'연락처',b_region:'지역',b_agree:'동의'}[id]||id);},true);
+  }
+  document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a');if(!a)return;var h=a.getAttribute('href')||'';if(h.indexOf('tel:')===0){st.tel++;dirty=true;}else if(h.indexOf('kakao')>=0){st.kakao++;dirty=true;}},true);
+  function done(lead,cta){st.sub=1;if(lead)st.lead=lead;if(cta)st.cta=cta;st.last='form';send(true);}
+  setTimeout(function(){send(true);},1200);
+  window.addEventListener('pagehide',function(){send(true);});
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')send(true);});
+  setInterval(function(){if(dirty)send(false);},60000);
+  window.KPAC_TRACK={state:st,send:send,done:done,sid:sid};
 })();
 </script>
 </body>
