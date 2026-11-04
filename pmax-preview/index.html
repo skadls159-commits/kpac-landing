@@ -157,34 +157,17 @@ window.karrotPixel.track('ViewPage');
 @media(max-width:560px){.bk .lform{padding:24px 18px 22px}.bk .lf-grid{grid-template-columns:1fr}.bk-day b{font-size:17px}}
 </style>
 <body class="sub">
+<script>/* r300d 이 페이지 안에서만 이동: #링크는 페이지 안 스크롤(base 주소 때문에 홈페이지로 가던 문제) · 다른 사이트 링크는 새 창 */
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var h=a.getAttribute('href')||'';if(h.charAt(0)==='#'){e.preventDefault();var id=h.slice(1);var el=id==='top'?document.body:document.getElementById(id);if(el){var y=id==='top'?0:el.getBoundingClientRect().top+window.scrollY-80;window.scrollTo({top:y,behavior:'smooth'});}return;}if(/^(tel:|mailto:|javascript:)/i.test(h))return;if(!a.target){a.target='_blank';a.rel='noopener';}},true);
+</script>
 <div class="progress" aria-hidden="true"><i id="prog"></i></div>
 <header class="header dark" id="top">
   <div class="wrap nav">
-    <a href="index.html" class="logo" aria-label="한국정책자문센터 홈">
+    <a href="#top" class="logo" aria-label="한국정책자문센터">
       <img class="logo-d" src="img-kpac-mark-d.png" alt="" width="34" height="34"><img class="logo-l" src="img-kpac-mark-l.png" alt="" width="34" height="34">
       <span class="logo-text"><b>한국정책자문센터</b><small>KOREA POLICY ADVISORY CENTER</small></span>
     </a>
-    <nav class="nav-links" aria-label="주요 메뉴">
-      <a href="about.html">회사소개</a>
-      <a href="services.html">서비스 안내</a>
-      <a href="cases.html">성공사례</a>
-      <a href="resources.html">무료자료</a>
-      <a href="faq.html">자주 묻는 질문</a>
-      <a href="contact.html">상담문의</a>
-    </nav>
-    <div class="nav-right">
-      <a href="#bk" class="btn btn-primary nav-cta">상담 신청</a>
-      <button class="nav-toggle" aria-label="메뉴 열기" aria-expanded="false"><span></span></button>
-    </div>
-  </div>
-  <div class="m-menu" id="mMenu">
-    <a href="about.html">회사소개</a>
-    <a href="services.html">서비스 안내</a>
-    <a href="cases.html">성공사례</a>
-    <a href="resources.html">무료자료</a>
-    <a href="faq.html">자주 묻는 질문</a>
-    <a href="contact.html">상담문의</a>
-    <a href="#bk" class="btn btn-primary">상담 신청</a>
+    <div class="nav-right"><a href="#bk" class="btn btn-primary nav-cta" data-cta="header">무료 진단 예약</a></div>
   </div>
 </header>
 <main><div class="r300-draft">시안 v3 · 실적최대화 전용 미리보기 · 광고에는 아직 연결 안 됨</div>
