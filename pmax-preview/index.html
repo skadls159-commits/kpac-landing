@@ -157,8 +157,8 @@ window.karrotPixel.track('ViewPage');
 @media(max-width:560px){.bk .lform{padding:24px 18px 22px}.bk .lf-grid{grid-template-columns:1fr}.bk-day b{font-size:17px}}
 </style>
 <body class="sub">
-<script>/* r300d 이 페이지 안에서만 이동: #링크는 페이지 안 스크롤(base 주소 때문에 홈페이지로 가던 문제) · 다른 사이트 링크는 새 창 */
-document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var h=a.getAttribute('href')||'';if(h.charAt(0)==='#'){e.preventDefault();var id=h.slice(1);var el=id==='top'?document.body:document.getElementById(id);if(el){var y=id==='top'?0:el.getBoundingClientRect().top+window.scrollY-80;window.scrollTo({top:y,behavior:'smooth'});}return;}if(/^(tel:|mailto:|javascript:)/i.test(h))return;if(!a.target){a.target='_blank';a.rel='noopener';}},true);
+<script>/* r300d 이 페이지 안에서만 이동: #링크(kpac-attr.js 가 kpac.store 주소로 바꿔도)는 페이지 안 스크롤 · 다른 페이지 링크는 새 창 */
+document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var raw=a.getAttribute('href')||'';if(/^(tel:|mailto:|javascript:)/i.test(raw))return;var u;try{u=new URL(a.href,location.href);}catch(x){return;}var hash=raw.charAt(0)==='#'?raw:(u.hash||'');var home=/(^|\.)kpac\.store$/.test(u.hostname)&&(u.pathname==='/'||u.pathname==='/index.html');var same=u.origin===location.origin&&u.pathname===location.pathname;if(hash&&(raw.charAt(0)==='#'||home||same)){e.preventDefault();var id=hash.slice(1);var el=id==='top'?null:document.getElementById(id);var y=el?el.getBoundingClientRect().top+window.scrollY-80:0;window.scrollTo({top:y,behavior:'smooth'});return;}a.target='_blank';a.rel='noopener';},true);
 </script>
 <div class="progress" aria-hidden="true"><i id="prog"></i></div>
 <header class="header dark" id="top">
